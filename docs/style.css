@@ -17,7 +17,7 @@
   --hover: rgba(11, 11, 11, 0.04);
   --selected: rgba(42, 120, 214, 0.08);
   --radius: 10px;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -151,6 +151,32 @@ select {
 }
 .segmented button:hover { background: var(--hover); }
 .segmented button[aria-pressed="true"] { background: var(--selected); color: var(--ink); font-weight: 600; }
+.review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: flex-end;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--grid);
+}
+.chip-count {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.toggle:hover { background: var(--hover); }
+.toggle[aria-pressed="true"] { background: var(--selected); color: var(--ink); font-weight: 600; border-color: var(--accent); }
 .link-button, .more {
   font: inherit;
   font-size: 0.85rem;

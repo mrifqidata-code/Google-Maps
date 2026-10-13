@@ -13,7 +13,10 @@ const state = {
   center: ALL,
   period: "30",
   metric: "rating",
-  stars: "all",
+  // Filter khusus daftar ulasan.
+  reviewCenter: ALL,
+  reviewStars: new Set(),
+  reviewUnreplied: false,
   sortKey: "name",
   sortDir: 1,
   chartAsTable: false,
@@ -144,15 +147,16 @@ function inPeriod(points) {
   return points.filter((p) => p.date > cutoff || p === start);
 }
 
-function filteredReviews({ center = state.center, stars = state.stars } = {}) {
+// stars: "low" (1–3), atau Set berisi angka bintang (kosong = semua).
+function filteredReviews({ center = state.center, stars = null, unreplied = false } = {}) {
   const active = new Set(state.summary.centers.map((c) => c.place_id));
   const cutoff = cutoffDate();
   return state.reviews.filter((review) => {
     if (!active.has(review.place_id)) return false;
     if (center !== ALL && review.place_id !== center) return false;
     if (stars === "low" && !(review.rating <= 3)) return false;
-    if (stars === "high" && !(review.rating >= 4)) return false;
-    if (stars === "unreplied" && !isUnreplied(review)) return false;
+    if (stars instanceof Set && stars.size && !stars.has(Math.round(review.rating))) return false;
+    if (unreplied && !isUnreplied(review)) return false;
     if (cutoff && (review.publish_time || "").slice(0, 10) < cutoff) return false;
     return true;
   });
@@ -214,9 +218,35 @@ function renderFilters() {
   for (const button of document.querySelectorAll("[data-metric]")) {
     button.setAttribute("aria-pressed", String(button.dataset.metric === state.metric));
   }
-  for (const button of document.querySelectorAll("[data-stars]")) {
-    button.setAttribute("aria-pressed", String(button.dataset.stars === state.stars));
-  }
+}
+
+function renderReviewFilters() {
+  const select = $("#review-center");
+  const sorted = [...state.summary.centers].sort((a, b) => a.name.localeCompare(b.name, "id"));
+  select.replaceChildren(
+    el("option", { value: ALL, text: "Semua cabang" }),
+    ...sorted.map((center) => el("option", { value: center.place_id, text: center.name })),
+  );
+  select.value = state.reviewCenter;
+
+  // Jumlah per bintang mengikuti cabang, periode, dan filter "belum dibalas" yang sedang aktif.
+  const pool = filteredReviews({ center: state.reviewCenter, unreplied: state.reviewUnreplied });
+  const counts = [0, 0, 0, 0, 0, 0];
+  for (const review of pool) counts[Math.round(review.rating)] += 1;
+  const chip = (label, pressed, onclick, count) =>
+    el("button", { type: "button", "aria-pressed": String(pressed), onclick },
+      label, count == null ? null : el("span", { class: "chip-count", text: fmtInt(count) }));
+  $("#review-stars").replaceChildren(
+    chip("Semua", state.reviewStars.size === 0, () => setState({ reviewStars: new Set() }), pool.length),
+    ...[5, 4, 3, 2, 1].map((star) =>
+      chip(`${star} ★`, state.reviewStars.has(star), () => {
+        const next = new Set(state.reviewStars);
+        next.has(star) ? next.delete(star) : next.add(star);
+        setState({ reviewStars: next });
+      }, counts[star]),
+    ),
+  );
+  $("#review-unreplied").setAttribute("aria-pressed", String(state.reviewUnreplied));
 }
 
 function kpi(label, value, note, hero = false) {
@@ -537,8 +567,13 @@ function renderTable() {
 }
 
 function renderReviews() {
+  renderReviewFilters();
   const names = Object.fromEntries(state.summary.centers.map((c) => [c.place_id, c.name]));
-  const reviews = filteredReviews();
+  const reviews = filteredReviews({
+    center: state.reviewCenter,
+    stars: state.reviewStars,
+    unreplied: state.reviewUnreplied,
+  });
   const items = reviews.slice(0, state.reviewLimit).map((review) => {
     const author = safeUrl(review.author_uri);
     const photo = safeUrl(review.author_photo);
@@ -546,7 +581,9 @@ function renderReviews() {
     const showOriginal = review.original_text && review.original_text !== review.text;
     return el("li", { class: "review" },
       el("div", { class: "review-head" },
-        photo ? el("img", { src: photo, alt: "", loading: "lazy", referrerpolicy: "no-referrer" }) : null,
+        photo
+          ? el("img", { src: photo, alt: "", loading: "lazy", referrerpolicy: "no-referrer", onerror: (event) => event.target.remove() })
+          : null,
         el("div", { class: "review-meta" },
           author
             ? el("a", { class: "author", href: author, target: "_blank", rel: "noopener", text: review.author || "Pengulas Google" })
@@ -593,6 +630,8 @@ function render() {
 function setState(patch) {
   Object.assign(state, patch);
   if (!("reviewLimit" in patch)) state.reviewLimit = PAGE_SIZE;
+  // Memilih cabang di filter utama / tabel ikut memfilter daftar ulasan.
+  if ("center" in patch && !("reviewCenter" in patch)) state.reviewCenter = patch.center;
   render();
 }
 
@@ -629,9 +668,8 @@ async function init() {
   for (const button of document.querySelectorAll("[data-metric]")) {
     button.addEventListener("click", () => setState({ metric: button.dataset.metric }));
   }
-  for (const button of document.querySelectorAll("[data-stars]")) {
-    button.addEventListener("click", () => setState({ stars: button.dataset.stars }));
-  }
+  $("#review-center").addEventListener("change", (event) => setState({ reviewCenter: event.target.value }));
+  $("#review-unreplied").addEventListener("click", () => setState({ reviewUnreplied: !state.reviewUnreplied }));
   $("#chart-toggle").addEventListener("click", () => setState({ chartAsTable: !state.chartAsTable }));
   $("#reviews-more").addEventListener("click", () => setState({ reviewLimit: state.reviewLimit + PAGE_SIZE }));
 

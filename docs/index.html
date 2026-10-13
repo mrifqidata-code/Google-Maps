@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Review Sparks Swim</title>
   <meta name="description" content="Monitoring rating dan ulasan Google Maps semua cabang Sparks Swim.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
@@ -76,14 +79,22 @@
         <div class="card-head">
           <div>
             <h2>Ulasan tercatat</h2>
-            <p class="muted small">Ulasan terbaru dikumpulkan setiap kali cabang dicek. Cabang dicek bergiliran
-              sesuai kuota SerpApi, jadi ulasan bisa muncul di sini satu sampai dua hari setelah ditulis.</p>
+            <p class="muted small">Ulasan terbaru dikumpulkan setiap pagi saat cabang dicek. Kalau jumlah cabang
+              melebihi kuota harian SerpApi, cabang dicek bergiliran sehingga ulasan bisa muncul 1–2 hari kemudian.</p>
           </div>
-          <div class="segmented" id="filter-stars" role="group" aria-label="Filter bintang">
-            <button type="button" data-stars="all">Semua</button>
-            <button type="button" data-stars="low">1–3 ★</button>
-            <button type="button" data-stars="high">4–5 ★</button>
-            <button type="button" data-stars="unreplied">Belum dibalas</button>
+        </div>
+        <div class="review-filters">
+          <label class="field">
+            <span>Cabang</span>
+            <select id="review-center"></select>
+          </label>
+          <div class="field" role="group" aria-labelledby="review-stars-label">
+            <span id="review-stars-label">Bintang (bisa pilih lebih dari satu)</span>
+            <div class="segmented" id="review-stars"></div>
+          </div>
+          <div class="field">
+            <span>Status balasan</span>
+            <button type="button" class="toggle" id="review-unreplied" aria-pressed="false">Belum dibalas saja</button>
           </div>
         </div>
         <ol class="reviews" id="reviews"></ol>
