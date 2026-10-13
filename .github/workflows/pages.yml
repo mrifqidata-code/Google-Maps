@@ -1,0 +1,41 @@
+name: Deploy dashboard
+
+# Deploy ulang tampilan dashboard saat kodenya berubah, tanpa mengambil data (tidak memakai kuota SerpApi).
+# Commit data harian dibuat oleh GITHUB_TOKEN sehingga tidak memicu workflow ini.
+on:
+  push:
+    paths:
+      - "docs/*.html"
+      - "docs/*.js"
+      - "docs/*.css"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
