@@ -1,5 +1,66 @@
 {
-  "updated_at": null,
-  "date": null,
-  "centers": []
+  "updated_at": "2026-10-13T12:35:16Z",
+  "date": "2026-10-13",
+  "centers": [
+    {
+      "rating": 4.9,
+      "user_rating_count": 69,
+      "last_fetched": "2026-10-13T12:35:16Z",
+      "error": null,
+      "place_id": "ChIJQQN7TQHzaS4RLzQQ4w19Fvg",
+      "name": "Sparks Swim - Kalimalang",
+      "address": "Jl. Pahlawan Revolusi No.11, RT.3/RW.4, Pd. Bambu, Kec. Duren Sawit, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13430, Indonesia",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJQQN7TQHzaS4RLzQQ4w19Fvg"
+    },
+    {
+      "rating": 4.7,
+      "user_rating_count": 14,
+      "last_fetched": "2026-10-13T12:35:16Z",
+      "error": null,
+      "place_id": "ChIJlWCdgmXlaS4Rd22jM9sakjU",
+      "name": "Sparks Swim - Pamulang",
+      "address": "Jl. Raya Puspitek, RT.01/RW.03, Babakan, Kec. Setu, Kota Tangerang Selatan, Banten 15315, Indonesia",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJlWCdgmXlaS4Rd22jM9sakjU"
+    },
+    {
+      "rating": 4.7,
+      "user_rating_count": 52,
+      "last_fetched": "2026-10-13T12:35:16Z",
+      "error": null,
+      "place_id": "ChIJ4br5D0z_aS4RtgiitKkVQwk",
+      "name": "Sparks Swim - Karawaci",
+      "address": "Jl. Palem Semi, RT.001/RW.009, Panunggangan Bar., Kec. Cibodas, Kota Tangerang, Banten 15318, Indonesia",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJ4br5D0z_aS4RtgiitKkVQwk"
+    },
+    {
+      "rating": null,
+      "user_rating_count": null,
+      "last_fetched": "2026-10-13T12:35:16Z",
+      "error": null,
+      "place_id": "ChIJodkZ3y_xaS4R8l_mHsQwP4s",
+      "name": "Sparks Swim - Bintaro Utown",
+      "address": "Bintaro U-Town Jaya, Jl. Boulevard UPJ No.1, RW.9, Sawah Baru, Kec. Ciputat, Kota Tangerang Selatan, Banten 15413, Indonesia",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJodkZ3y_xaS4R8l_mHsQwP4s"
+    },
+    {
+      "rating": 5,
+      "user_rating_count": 5,
+      "last_fetched": "2026-10-13T12:35:16Z",
+      "error": null,
+      "place_id": "ChIJv5sOUIoDai4Rnt6pqqcJ4wY",
+      "name": "Sparks Swim - Taman Palem",
+      "address": "Jl. Palem Raja Barat No.10, RT.5/RW.13, Pegadungan, RT.5/RW.13, Kota, Kec. Kalideres, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11830, Indonesia",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJv5sOUIoDai4Rnt6pqqcJ4wY"
+    },
+    {
+      "rating": 3,
+      "user_rating_count": 1,
+      "last_fetched": "2026-10-13T12:35:16Z",
+      "error": null,
+      "place_id": "ChIJsyqvhgmLaS4RcIPPBVvkLYM",
+      "name": "Sparks Swim - Harapan Indah",
+      "address": "Mega Office Park, Jl. Harapan Indah Boulevard, RT.005/RW.010, Medan Satria, Kecamatan Medan Satria, Kota Bks, Jawa Barat 17132, Indonesia",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJsyqvhgmLaS4RcIPPBVvkLYM"
+    }
+  ]
 }

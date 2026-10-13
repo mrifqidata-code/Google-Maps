@@ -1,1 +1,37 @@
-{}
+{
+  "ChIJQQN7TQHzaS4RLzQQ4w19Fvg": [
+    {
+      "date": "2026-10-13",
+      "rating": 4.9,
+      "count": 69
+    }
+  ],
+  "ChIJlWCdgmXlaS4Rd22jM9sakjU": [
+    {
+      "date": "2026-10-13",
+      "rating": 4.7,
+      "count": 14
+    }
+  ],
+  "ChIJ4br5D0z_aS4RtgiitKkVQwk": [
+    {
+      "date": "2026-10-13",
+      "rating": 4.7,
+      "count": 52
+    }
+  ],
+  "ChIJv5sOUIoDai4Rnt6pqqcJ4wY": [
+    {
+      "date": "2026-10-13",
+      "rating": 5,
+      "count": 5
+    }
+  ],
+  "ChIJsyqvhgmLaS4RcIPPBVvkLYM": [
+    {
+      "date": "2026-10-13",
+      "rating": 3,
+      "count": 1
+    }
+  ]
+}
