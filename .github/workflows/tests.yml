@@ -1,0 +1,23 @@
+name: Tests
+
+on:
+  push:
+    paths:
+      - "monitor/**"
+      - "tests/**"
+      - "docs/*.js"
+      - ".github/workflows/tests.yml"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Unit test Python
+        run: python3 -m unittest discover -s tests -t . -v
+      - name: Cek sintaks dashboard
+        run: node --check docs/app.js

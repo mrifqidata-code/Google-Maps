@@ -1,0 +1,73 @@
+name: Kelola cabang
+
+on:
+  workflow_dispatch:
+    inputs:
+      aksi:
+        description: "discover = cari otomatis semua cabang Sparks Swim; add = tambah dari link"
+        type: choice
+        options:
+          - discover
+          - add
+        default: discover
+      links:
+        description: "Khusus 'add': link Google Maps atau place ID, pisahkan dengan spasi"
+        type: string
+        required: false
+  schedule:
+    # Setiap Senin pukul 06.03 WIB: cek apakah ada cabang baru.
+    - cron: "3 23 * * 0"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
+
+jobs:
+  centers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Cari semua cabang
+        if: github.event_name == 'schedule' || inputs.aksi == 'discover'
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: python3 -m monitor discover
+
+      - name: Tambah cabang dari link
+        if: github.event_name == 'workflow_dispatch' && inputs.aksi == 'add'
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          # Input lewat env (bukan ${{ }} langsung di script) supaya aman dari injeksi shell.
+          LINKS: ${{ inputs.links }}
+        run: |
+          if [ -z "$LINKS" ]; then
+            echo "::error::Isi kolom 'links' dengan link Google Maps atau place ID."
+            exit 1
+          fi
+          python3 -m monitor add "$LINKS"
+
+      - name: Simpan daftar cabang
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/centers.json
+          if git diff --cached --quiet; then
+            echo "Daftar cabang tidak berubah."
+            exit 0
+          fi
+          git commit -m "Update daftar cabang Sparks Swim"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Ambil data untuk cabang baru
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run monitor.yml --ref "$GITHUB_REF_NAME"

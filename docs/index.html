@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Review Sparks Swim</title>
+  <meta name="description" content="Monitoring rating dan ulasan Google Maps semua cabang Sparks Swim.">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="page-header">
+    <div>
+      <h1>Review Google Maps · Sparks Swim</h1>
+      <p class="muted" id="updated">Memuat data…</p>
+    </div>
+  </header>
+
+  <main id="app" aria-busy="true">
+    <section class="filters" aria-label="Filter">
+      <label class="field">
+        <span>Cabang</span>
+        <select id="filter-center"></select>
+      </label>
+      <div class="field" role="group" aria-labelledby="period-label">
+        <span id="period-label">Periode</span>
+        <div class="segmented" id="filter-period">
+          <button type="button" data-period="7">7 hari</button>
+          <button type="button" data-period="30">30 hari</button>
+          <button type="button" data-period="90">90 hari</button>
+          <button type="button" data-period="all">Semua</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="empty card" id="empty" hidden>
+      <h2>Belum ada data</h2>
+      <p>Jalankan workflow <strong>Kelola cabang</strong> untuk mencari cabang, lalu workflow
+        <strong>Monitor review</strong> untuk mengambil rating dan ulasan pertama. Lihat README untuk langkahnya.</p>
+    </section>
+
+    <div id="content">
+      <section class="kpis" id="kpis" aria-label="Ringkasan"></section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2 id="chart-title">Tren rating</h2>
+            <p class="muted small" id="chart-subtitle"></p>
+          </div>
+          <div class="card-actions">
+            <div class="segmented" id="chart-metric" role="group" aria-label="Metrik grafik">
+              <button type="button" data-metric="rating">Rating</button>
+              <button type="button" data-metric="count">Jumlah ulasan</button>
+            </div>
+            <button type="button" class="link-button" id="chart-toggle">Lihat tabel</button>
+          </div>
+        </div>
+        <div class="chart" id="chart" tabindex="0" role="img"></div>
+        <div class="chart-table" id="chart-table" hidden></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Per cabang</h2>
+            <p class="muted small" id="table-subtitle"></p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="centers" id="centers"></table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Ulasan tercatat</h2>
+            <p class="muted small">Google hanya memberikan maksimal 5 ulasan per cabang di setiap pengambilan data,
+              jadi daftar ini berisi ulasan yang sempat tercatat, bukan seluruh ulasan. Angka "ulasan baru"
+              di atas dihitung dari total ulasan di Google.</p>
+          </div>
+          <div class="segmented" id="filter-stars" role="group" aria-label="Filter bintang">
+            <button type="button" data-stars="all">Semua</button>
+            <button type="button" data-stars="low">1–3 ★</button>
+            <button type="button" data-stars="high">4–5 ★</button>
+          </div>
+        </div>
+        <ol class="reviews" id="reviews"></ol>
+        <button type="button" class="more" id="reviews-more" hidden>Tampilkan lebih banyak</button>
+      </section>
+    </div>
+  </main>
+
+  <footer class="page-footer muted small">
+    Sumber data: <span class="google-attribution">Google Maps</span> (Places API). Ulasan ditampilkan apa adanya
+    dengan nama penulis aslinya.
+  </footer>
+</body>
+</html>
