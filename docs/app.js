@@ -97,8 +97,8 @@ function centerStats(center) {
   const deltaRating =
     latest && start && latest.rating != null && start.rating != null ? latest.rating - start.rating : null;
   const newReviews = latest && start ? latest.count - start.count : null;
-  const lowReviews = filteredReviews({ center: center.place_id, stars: "low" }).length;
-  return { latest, start, partial, deltaRating, newReviews, lowReviews };
+  const low = filteredReviews({ center: center.place_id, stars: "low" });
+  return { latest, start, partial, deltaRating, newReviews, lowReviews: low.length, unreplied: low.filter(isUnreplied).length };
 }
 
 function weightedRating(rows) {
@@ -152,6 +152,7 @@ function filteredReviews({ center = state.center, stars = state.stars } = {}) {
     if (center !== ALL && review.place_id !== center) return false;
     if (stars === "low" && !(review.rating <= 3)) return false;
     if (stars === "high" && !(review.rating >= 4)) return false;
+    if (stars === "unreplied" && !isUnreplied(review)) return false;
     if (cutoff && (review.publish_time || "").slice(0, 10) < cutoff) return false;
     return true;
   });
@@ -185,10 +186,17 @@ function starsNode(rating) {
 
 function statusNode(row) {
   if (row.error) return el("span", { class: "status bad", title: row.error, text: "⚠ Gagal diambil" });
-  if (row.business_status === "CLOSED_TEMPORARILY") return el("span", { class: "status warn", text: "○ Tutup sementara" });
-  if (row.business_status === "CLOSED_PERMANENTLY") return el("span", { class: "status bad", text: "✕ Tutup permanen" });
-  return el("span", { class: "status ok", text: "● Buka" });
+  if (!row.last_fetched) return el("span", { class: "status warn", text: "○ Menunggu giliran" });
+  return el("span", { class: "status ok", text: "● Aktif" });
 }
+
+function lastCheckedNode(row) {
+  if (!row.last_fetched) return null;
+  const date = new Date(row.last_fetched).toLocaleDateString("id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" });
+  return el("div", { class: "address", text: `dicek ${date}` });
+}
+
+const isUnreplied = (review) => review.rating <= 3 && !review.response_text;
 
 /* ---------- Render ---------- */
 
@@ -227,7 +235,8 @@ function renderKpis() {
   const ratingDelta = current != null && startRating != null ? current - startRating : null;
   const total = centers.reduce((sum, c) => sum + (c.user_rating_count || 0), 0);
   const newReviews = stats.reduce((sum, s) => sum + (s.newReviews || 0), 0);
-  const low = filteredReviews({ stars: "low" }).length;
+  const lowList = filteredReviews({ stars: "low" });
+  const unreplied = lowList.filter(isUnreplied).length;
   const partial = stats.some((s) => s.partial);
   const periodNote = partial ? `${periodLabel()} (data sebagian cabang belum lengkap)` : periodLabel();
 
@@ -240,7 +249,10 @@ function renderKpis() {
     ),
     kpi("Total ulasan di Google", fmtInt(total)),
     kpi("Ulasan baru", fmtInt(newReviews), periodNote),
-    kpi("Ulasan 1–3 ★ tercatat", fmtInt(low), periodLabel()),
+    kpi("Ulasan 1–3 ★", fmtInt(lowList.length), [
+      unreplied ? el("span", { class: "delta down", text: `${fmtInt(unreplied)} belum dibalas` }) : "semua sudah dibalas",
+      ` · ${periodLabel()}`,
+    ]),
   ];
   if (state.center === ALL) {
     const failing = centers.filter((c) => c.error).length;
@@ -453,7 +465,8 @@ const COLUMNS = [
   { key: "deltaRating", label: "Perubahan", num: true },
   { key: "count", label: "Ulasan", num: true },
   { key: "newReviews", label: "Ulasan baru", num: true },
-  { key: "lowReviews", label: "1–3 ★ tercatat", num: true },
+  { key: "lowReviews", label: "1–3 ★", num: true },
+  { key: "unreplied", label: "Belum dibalas", num: true },
   { key: "status", label: "Status" },
   { key: "link", label: "", sortable: false },
 ];
@@ -472,7 +485,8 @@ function renderTable() {
       count: center.user_rating_count,
       newReviews: stats.newReviews,
       lowReviews: stats.lowReviews,
-      status: center.error ? 0 : center.business_status === "OPERATIONAL" ? 2 : 1,
+      unreplied: stats.unreplied,
+      status: center.error ? 0 : center.last_fetched ? 2 : 1,
     };
   });
   const { sortKey, sortDir } = state;
@@ -512,8 +526,9 @@ function renderTable() {
       el("td", { class: "num" }, deltaNode(row.deltaRating), stats.partial ? el("div", { class: "address", text: `sejak ${fmtShortDate(stats.start.date)}` }) : null),
       el("td", { class: "num", text: fmtInt(row.count) }),
       el("td", { class: "num" }, row.newReviews ? `+${fmtInt(row.newReviews)}` : row.newReviews === 0 ? "0" : "–"),
-      el("td", { class: "num" }, row.lowReviews ? el("span", { class: "badge-low", text: fmtInt(row.lowReviews) }) : "0"),
-      el("td", {}, statusNode(center)),
+      el("td", { class: "num", text: fmtInt(row.lowReviews) }),
+      el("td", { class: "num" }, row.unreplied ? el("span", { class: "badge-low", text: fmtInt(row.unreplied) }) : "0"),
+      el("td", {}, statusNode(center), lastCheckedNode(center)),
       el("td", {}, safeUrl(center.maps_url) ? el("a", { href: safeUrl(center.maps_url), target: "_blank", rel: "noopener", text: "Maps ↗" }) : null),
     ),
   );
@@ -542,10 +557,16 @@ function renderReviews() {
       el("div", { style: "margin-top:6px" },
         starsNode(review.rating),
         el("span", { class: "rating-text", text: `${review.rating}/5` }),
-        review.rating <= 3 ? [" ", el("span", { class: "badge-low", text: "Perlu ditindaklanjuti" })] : null,
+        isUnreplied(review) ? [" ", el("span", { class: "badge-low", text: "Belum dibalas" })] : null,
       ),
       el("p", { class: `review-text${review.text ? "" : " empty"}`, text: review.text || "Tanpa teks, hanya rating." }),
       showOriginal ? el("details", {}, el("summary", { text: "Teks asli" }), el("p", { text: review.original_text })) : null,
+      review.response_text
+        ? el("div", { class: "owner-reply" },
+            el("div", { class: "sub", text: `Balasan pemilik${review.response_time ? " · " + fmtDate(review.response_time.slice(0, 10)) : ""}` }),
+            el("p", { text: review.response_text }),
+          )
+        : null,
       safeUrl(review.maps_uri)
         ? el("div", { class: "review-links" }, el("a", { href: safeUrl(review.maps_uri), target: "_blank", rel: "noopener", text: "Lihat di Google Maps ↗" }))
         : null,

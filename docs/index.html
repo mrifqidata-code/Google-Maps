@@ -76,14 +76,14 @@
         <div class="card-head">
           <div>
             <h2>Ulasan tercatat</h2>
-            <p class="muted small">Google hanya memberikan maksimal 5 ulasan per cabang di setiap pengambilan data,
-              jadi daftar ini berisi ulasan yang sempat tercatat, bukan seluruh ulasan. Angka "ulasan baru"
-              di atas dihitung dari total ulasan di Google.</p>
+            <p class="muted small">Ulasan terbaru dikumpulkan setiap kali cabang dicek. Cabang dicek bergiliran
+              sesuai kuota SerpApi, jadi ulasan bisa muncul di sini satu sampai dua hari setelah ditulis.</p>
           </div>
           <div class="segmented" id="filter-stars" role="group" aria-label="Filter bintang">
             <button type="button" data-stars="all">Semua</button>
             <button type="button" data-stars="low">1–3 ★</button>
             <button type="button" data-stars="high">4–5 ★</button>
+            <button type="button" data-stars="unreplied">Belum dibalas</button>
           </div>
         </div>
         <ol class="reviews" id="reviews"></ol>
@@ -93,8 +93,8 @@
   </main>
 
   <footer class="page-footer muted small">
-    Sumber data: <span class="google-attribution">Google Maps</span> (Places API). Ulasan ditampilkan apa adanya
-    dengan nama penulis aslinya.
+    Sumber data: ulasan publik <span class="google-attribution">Google Maps</span>, diambil lewat SerpApi.
+    Ulasan ditampilkan apa adanya dengan nama penulis aslinya.
   </footer>
 </body>
 </html>

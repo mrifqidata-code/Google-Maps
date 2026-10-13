@@ -22,9 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Ambil rating dan ulasan dari Google Places API
+      - name: Ambil rating dan ulasan (bergiliran sesuai kuota SerpApi)
         env:
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
         run: python3 -m monitor fetch
 
       - name: Simpan data ke repo

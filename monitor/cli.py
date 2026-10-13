@@ -1,4 +1,4 @@
-"""Perintah: discover (cari cabang), add (tambah dari link), fetch (ambil rating & review)."""
+"""Perintah: discover (cari cabang), add (tambah dari link), fetch (ambil rating & ulasan)."""
 
 import argparse
 import os
@@ -7,14 +7,17 @@ from pathlib import Path
 
 from monitor import store
 from monitor.links import LinkError, resolve
-from monitor.places import PlacesClient, PlacesError
+from monitor.serpapi import SerpApiClient, SerpApiError
+
+# Satu cabang paling banyak memakai sekian request per fetch saat mengejar ulasan yang tertinggal.
+MAX_PAGES_PER_CENTER = 3
 
 
 def default_client_factory(search):
-    return PlacesClient(
-        os.environ.get("GOOGLE_MAPS_API_KEY", ""),
-        language_code=search.get("language_code", "id"),
-        region_code=search.get("region_code", "ID"),
+    return SerpApiClient(
+        os.environ.get("SERPAPI_API_KEY", ""),
+        hl=search.get("hl", "id"),
+        gl=search.get("gl", "id"),
     )
 
 
@@ -24,10 +27,11 @@ def warn(message):
 
 
 def load_config(path):
-    config = store.load_json(path, None)
-    if config is None:
-        config = {"search": dict(store.DEFAULT_CONFIG["search"]), "centers": []}
-    config.setdefault("search", dict(store.DEFAULT_CONFIG["search"]))
+    config = store.load_json(path, None) or {}
+    for key in ("search", "quota"):
+        merged = dict(store.DEFAULT_CONFIG[key])
+        merged.update(config.get(key) or {})
+        config[key] = merged
     config.setdefault("centers", [])
     return config
 
@@ -40,25 +44,32 @@ def cmd_discover(args, client_factory):
 
     found = {}
     for query in search["queries"]:
-        for place in client.search_text(query):
-            found.setdefault(place["id"], place)
+        if isinstance(query, str):
+            query = {"q": query}
+        start = 0
+        while True:
+            page = client.maps_search(query["q"], ll=query.get("ll"), start=start)
+            for place in page:
+                found.setdefault(place["place_id"], place)
+            # Halaman berikutnya hanya kalau halaman ini penuh dan hasil terakhirnya masih relevan.
+            if len(page) < 20 or not store.name_matches(page[-1]["name"], search["name_filter"]) or start >= 40:
+                break
+            start += 20
 
     matched, ignored = [], []
     for place in found.values():
-        bucket = matched if store.name_matches(store.display_name(place), search["name_filter"]) else ignored
-        bucket.append(place)
+        (matched if store.name_matches(place["name"], search["name_filter"]) else ignored).append(place)
 
     added = [place for place in matched if store.upsert_center(config, place, "discover", today)]
 
     print(f"Ditemukan {len(found)} tempat, {len(matched)} cocok dengan '{search['name_filter']}'.")
     for place in matched:
-        mark = "BARU " if place in added else "ada  "
-        status = place.get("businessStatus", "")
-        print(f"  [{mark}] {store.display_name(place)} | {place.get('formattedAddress', '')} | {status}")
+        mark = "BARU" if place in added else "ada "
+        print(f"  [{mark}] {place['name']} | {place['address']} | {place['status']}")
     if ignored:
         print("Tidak cocok dengan filter nama (diabaikan):")
         for place in ignored:
-            print(f"  - {store.display_name(place)} | {place.get('formattedAddress', '')}")
+            print(f"  - {place['name']} | {place['address']}")
 
     if args.dry_run:
         print("Dry run: config tidak diubah.")
@@ -80,20 +91,70 @@ def cmd_add(args, client_factory):
     for value in values:
         try:
             place = resolve(value, client)
-        except (LinkError, PlacesError, OSError) as error:
+        except (LinkError, SerpApiError, OSError) as error:
             failures += 1
             warn(f"Gagal memproses {value}: {error}")
             continue
-        name = store.display_name(place)
-        if not store.name_matches(name, search["name_filter"]):
-            warn(f"'{name}' tidak mengandung '{search['name_filter']}', tetap ditambahkan karena diminta manual.")
+        name = place["name"] or "(nama terisi saat fetch pertama)"
+        if place["name"] and not store.name_matches(place["name"], search["name_filter"]):
+            warn(f"'{place['name']}' tidak mengandung '{search['name_filter']}', tetap ditambahkan karena diminta manual.")
         if store.upsert_center(config, place, "link", today):
-            print(f"Ditambahkan: {name} ({place['id']})")
+            print(f"Ditambahkan: {name} ({place['place_id']})")
         else:
-            print(f"Sudah ada: {name} ({place['id']})")
+            print(f"Sudah ada: {name} ({place['place_id']})")
 
     store.save_json(args.config, config)
     return 1 if values and failures == len(values) else 0
+
+
+def daily_budget(quota, client):
+    """Berapa request SerpApi yang boleh dipakai fetch hari ini."""
+    monthly = quota["monthly_searches"]
+    left = None
+    try:
+        account = client.account()
+        monthly = account.get("searches_per_month") or monthly
+        left = account.get("total_searches_left", account.get("plan_searches_left"))
+        print(f"Kuota SerpApi: {left} tersisa dari {monthly}/bulan (terpakai bulan ini: {account.get('this_month_usage')}).")
+    except SerpApiError as error:
+        if error.status in (401, 403):
+            raise
+        warn(f"Tidak bisa membaca info akun SerpApi ({error}); memakai angka kuota dari config.")
+    budget = max(1, (monthly - quota["reserved_searches"]) // 31)
+    if left is not None:
+        budget = min(budget, max(0, left))
+        if budget == 0:
+            warn("Kuota SerpApi bulan ini sudah habis; data akan diperbarui lagi setelah kuota direset.")
+    return budget
+
+
+def fetch_center(client, center, reviews, budget_left, now_iso):
+    """Ambil ulasan terbaru satu cabang. Return (place_info, jumlah ulasan baru, request terpakai)."""
+    place_id = center["place_id"]
+    known = {review["id"] for review in reviews if review["place_id"] == place_id}
+    token, place_info, added, used = None, {}, 0, 0
+    while True:
+        try:
+            page = client.reviews(center.get("data_id") or place_id, next_page_token=token)
+        except SerpApiError as error:
+            if not used:
+                raise
+            # Halaman pertama sudah berhasil; simpan yang sudah didapat dan lanjutkan di giliran berikutnya.
+            warn(f"{center['name']}: halaman ulasan berikutnya gagal diambil ({error}).")
+            return place_info, added, used + 1
+        used += 1
+        place_info = place_info or page["place_info"]
+        keys = [store.review_key(item) for item in page["reviews"]]
+        added += store.merge_reviews(reviews, place_id, page["reviews"], now_iso)
+        token = page["next_page_token"]
+        # Lanjut ke halaman berikutnya hanya kalau semua ulasan di halaman ini belum pernah tercatat,
+        # artinya mungkin masih ada ulasan baru yang tertinggal. Fetch pertama cukup halaman pertama.
+        caught_up = not keys or any(key in known for key in keys)
+        if caught_up or not known or not token:
+            return place_info, added, used
+        if used >= MAX_PAGES_PER_CENTER or used >= budget_left:
+            warn(f"{center['name']}: masih ada ulasan baru yang belum terambil; dilanjutkan di giliran berikutnya.")
+            return place_info, added, used
 
 
 def cmd_fetch(args, client_factory):
@@ -115,61 +176,75 @@ def cmd_fetch(args, client_factory):
     if not enabled:
         warn("Belum ada cabang aktif di config/centers.json. Jalankan workflow 'Kelola cabang' dulu.")
 
-    client = client_factory(config["search"]) if enabled else None
-    rows, failures, new_reviews = [], 0, 0
-    for center in enabled:
-        place_id = center["place_id"]
-        label = center.get("label") or center["name"]
-        try:
-            details = client.place_details(place_id)
-        except PlacesError as error:
-            failures += 1
-            warn(f"Gagal mengambil data {label}: {error}")
-            row = dict(previous.get(place_id, {}))
-            row.update({"place_id": place_id, "name": label, "error": str(error)})
-            row.setdefault("address", center.get("address", ""))
-            row.setdefault("maps_url", center.get("maps_url", ""))
-            rows.append(row)
-            continue
+    rows = {}
+    attempted, failures, new_reviews, used = 0, 0, 0, 0
+    if enabled:
+        client = client_factory(config["search"])
+        budget = daily_budget(config["quota"], client)
+        # Giliran: cabang yang paling lama tidak dicek (atau belum pernah) didahulukan.
+        queue = sorted(enabled, key=lambda c: previous.get(c["place_id"], {}).get("last_fetched") or "")
+        for center in queue:
+            if used >= budget:
+                break
+            place_id = center["place_id"]
+            label = center.get("label") or center["name"] or place_id
+            attempted += 1
+            try:
+                info, added, spent = fetch_center(client, center, reviews, budget - used, now_iso)
+            except SerpApiError as error:
+                used += 1
+                failures += 1
+                warn(f"Gagal mengambil data {label}: {error}")
+                row = dict(previous.get(place_id, {}))
+                row["error"] = str(error)
+                rows[place_id] = row
+                continue
+            used += spent
+            new_reviews += added
 
-        new_id = details.get("id") or place_id
-        if new_id != place_id:
-            print(f"Place ID {label} berubah: {place_id} -> {new_id}")
-            store.rename_place(place_id, new_id, config, history, reviews)
-            place_id = new_id
-
-        center["name"] = store.display_name(details) or center["name"]
-        center["address"] = details.get("formattedAddress", center.get("address", ""))
-        center["maps_url"] = details.get("googleMapsUri", center.get("maps_url", ""))
-
-        rating = details.get("rating")
-        count = details.get("userRatingCount", 0)
-        store.record_history(history, place_id, today, rating, count)
-        added = store.merge_reviews(reviews, place_id, details.get("reviews", []), now_iso)
-        new_reviews += added
-        rows.append(
-            {
-                "place_id": place_id,
-                "name": center.get("label") or center["name"],
-                "address": center["address"],
-                "maps_url": center["maps_url"],
-                "business_status": details.get("businessStatus", ""),
+            center["name"] = info.get("title") or center["name"]
+            center["address"] = info.get("address") or center.get("address", "")
+            rating = info.get("rating")
+            count = info.get("reviews")
+            if count is not None:
+                store.record_history(history, place_id, today, rating, count)
+            rows[place_id] = {
                 "rating": rating,
                 "user_rating_count": count,
                 "last_fetched": now_iso,
                 "error": None,
             }
+            print(f"{label}: rating {rating}, {count} ulasan, {added} ulasan baru tercatat ({spent} request)")
+
+    # Cabang yang belum dapat giliran hari ini tetap tampil dengan angka terakhirnya.
+    summary_rows = []
+    for center in enabled:
+        place_id = center["place_id"]
+        row = {"rating": None, "user_rating_count": None, "last_fetched": None, "error": None}
+        row.update(previous.get(place_id, {}))
+        row.update(rows.get(place_id, {}))
+        row.update(
+            {
+                "place_id": place_id,
+                "name": center.get("label") or center["name"] or place_id,
+                "address": center.get("address", ""),
+                "maps_url": center.get("maps_url", ""),
+            }
         )
-        print(f"{label}: rating {rating}, {count} ulasan, {added} review baru tercatat")
+        summary_rows.append(row)
 
     store.save_json(args.config, config)
-    store.save_json(summary_path, {"updated_at": now_iso, "date": today, "centers": rows})
+    store.save_json(summary_path, {"updated_at": now_iso, "date": today, "centers": summary_rows})
     store.save_json(history_path, history)
     store.save_json(reviews_path, reviews)
-    print(f"Selesai: {len(enabled) - failures}/{len(enabled)} cabang berhasil, {new_reviews} review baru.")
+    waiting = len(enabled) - attempted
+    print(
+        f"Selesai: {attempted - failures}/{attempted} cabang berhasil dicek, {new_reviews} ulasan baru, "
+        f"{used} request terpakai, {waiting} cabang menunggu giliran berikutnya."
+    )
 
-    # Semua gagal biasanya berarti API key/billing bermasalah, jadi workflow dibuat merah.
-    return 1 if enabled and failures == len(enabled) else 0
+    # Semua gagal biasanya berarti API key/kuota bermasalah, jadi workflow dibuat merah.
+    return 1 if attempted and failures == attempted else 0
 
 
 def build_parser():
@@ -178,15 +253,15 @@ def build_parser():
     parser.add_argument("--data-dir", default=str(store.DATA_DIR), help="folder data dashboard")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    discover = sub.add_parser("discover", help="cari semua cabang lewat Text Search")
+    discover = sub.add_parser("discover", help="cari semua cabang lewat Google Maps search")
     discover.add_argument("--dry-run", action="store_true", help="tampilkan hasil tanpa mengubah config")
     discover.set_defaults(func=cmd_discover)
 
-    add = sub.add_parser("add", help="tambah cabang dari link Google Maps atau place ID")
+    add = sub.add_parser("add", help="tambah cabang dari link Google Maps, place ID, atau data ID")
     add.add_argument("links", nargs="+")
     add.set_defaults(func=cmd_add)
 
-    fetch = sub.add_parser("fetch", help="ambil rating, jumlah ulasan, dan review terbaru")
+    fetch = sub.add_parser("fetch", help="ambil rating, jumlah ulasan, dan ulasan terbaru (bergiliran sesuai kuota)")
     fetch.set_defaults(func=cmd_fetch)
     return parser
 
@@ -195,6 +270,6 @@ def main(argv=None, client_factory=default_client_factory):
     args = build_parser().parse_args(argv)
     try:
         return args.func(args, client_factory)
-    except (PlacesError, ValueError) as error:
+    except (SerpApiError, ValueError) as error:
         print(f"::error::{error}")
         return 1

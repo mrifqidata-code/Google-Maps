@@ -278,6 +278,16 @@ tbody tr.selected { background: var(--selected); }
   padding: 0 8px;
 }
 .empty-list { color: var(--ink-2); padding: 12px 0; }
+.owner-reply {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--axis);
+  background: var(--hover);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+}
+.owner-reply .sub { font-size: 0.8rem; color: var(--ink-2); }
+.owner-reply p { white-space: pre-line; overflow-wrap: anywhere; }
 
 @media (max-width: 600px) {
   .kpi.hero .value { font-size: 2.5rem; }

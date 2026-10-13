@@ -35,13 +35,13 @@ jobs:
       - name: Cari semua cabang
         if: github.event_name == 'schedule' || inputs.aksi == 'discover'
         env:
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
         run: python3 -m monitor discover
 
       - name: Tambah cabang dari link
         if: github.event_name == 'workflow_dispatch' && inputs.aksi == 'add'
         env:
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
           # Input lewat env (bukan ${{ }} langsung di script) supaya aman dari injeksi shell.
           LINKS: ${{ inputs.links }}
         run: |

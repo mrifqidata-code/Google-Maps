@@ -1,11 +1,22 @@
 {
   "search": {
     "queries": [
-      "Sparks Swim"
+      {
+        "q": "Sparks Swim",
+        "ll": "@-6.25,106.8,10z"
+      },
+      {
+        "q": "Sparks Swim Indonesia",
+        "ll": "@-2.5,118,5z"
+      }
     ],
     "name_filter": "Sparks Swim",
-    "language_code": "id",
-    "region_code": "ID"
+    "hl": "id",
+    "gl": "id"
+  },
+  "quota": {
+    "monthly_searches": 250,
+    "reserved_searches": 20
   },
   "centers": []
 }

@@ -14,10 +14,20 @@ WIB = timezone(timedelta(hours=7), "WIB")
 
 DEFAULT_CONFIG = {
     "search": {
-        "queries": ["Sparks Swim"],
+        # "ll" = titik tengah peta + zoom, format "@lat,lng,zoomz". Tiap query = 1 kuota SerpApi per halaman.
+        "queries": [
+            {"q": "Sparks Swim", "ll": "@-6.25,106.8,10z"},
+            {"q": "Sparks Swim Indonesia", "ll": "@-2.5,118,5z"},
+        ],
         "name_filter": "Sparks Swim",
-        "language_code": "id",
-        "region_code": "ID",
+        "hl": "id",
+        "gl": "id",
+    },
+    "quota": {
+        # Kuota bulanan paket SerpApi (paket gratis: 250). Kalau akun bisa dibaca, angka dari akun yang dipakai.
+        "monthly_searches": 250,
+        # Disisihkan untuk discover/add supaya fetch harian tidak menghabiskan semuanya.
+        "reserved_searches": 20,
     },
     "centers": [],
 }
@@ -47,23 +57,35 @@ def name_matches(name, name_filter):
     return normalize(name_filter) in normalize(name)
 
 
-def display_name(place):
-    return (place.get("displayName") or {}).get("text") or place.get("id", "")
+def find_center(config, place):
+    ids = {place.get("place_id"), place.get("data_id")} - {None, ""}
+    for center in config["centers"]:
+        if ids & ({center.get("place_id"), center.get("data_id")} - {None, ""}):
+            return center
+    return None
+
+
+def permanently_closed(place):
+    return bool(re.search(r"permanen", place.get("status") or "", re.IGNORECASE))
 
 
 def upsert_center(config, place, source, today):
     """Tambahkan cabang baru ke config. Return True kalau cabang belum ada sebelumnya."""
-    for center in config["centers"]:
-        if center["place_id"] == place["id"]:
-            return False
+    existing = find_center(config, place)
+    if existing:
+        # Lengkapi data ID yang belum tercatat tanpa mengubah kunci riwayat (place_id).
+        if place.get("data_id") and not existing.get("data_id"):
+            existing["data_id"] = place["data_id"]
+        return False
     config["centers"].append(
         {
-            "place_id": place["id"],
-            "name": display_name(place),
-            "address": place.get("formattedAddress", ""),
-            "maps_url": place.get("googleMapsUri", ""),
+            "place_id": place["place_id"],
+            "data_id": place.get("data_id", ""),
+            "name": place.get("name", ""),
+            "address": place.get("address", ""),
+            "maps_url": place.get("maps_url", ""),
             # Cabang yang sudah tutup permanen tidak ikut dimonitor kecuali diaktifkan manual.
-            "enabled": place.get("businessStatus") != "CLOSED_PERMANENTLY",
+            "enabled": not permanently_closed(place),
             "source": source,
             "added_at": today,
         }
@@ -72,10 +94,12 @@ def upsert_center(config, place, source, today):
 
 
 def review_key(review):
-    if review.get("name"):
-        return review["name"]
-    author = (review.get("authorAttribution") or {}).get("uri", "")
-    return f"{author}|{review.get('publishTime', '')}"
+    if review.get("review_id"):
+        return review["review_id"]
+    if review.get("link"):
+        return review["link"]
+    author = (review.get("user") or {}).get("link", "")
+    return f"{author}|{review.get('iso_date', '')}"
 
 
 def merge_reviews(reviews, place_id, fetched, now_iso):
@@ -84,22 +108,26 @@ def merge_reviews(reviews, place_id, fetched, now_iso):
     added = 0
     for item in fetched:
         key = review_key(item)
-        author = item.get("authorAttribution") or {}
-        text = item.get("text") or {}
-        original = item.get("originalText") or {}
+        user = item.get("user") or {}
+        snippet = item.get("extracted_snippet") or {}
+        response = item.get("response") or {}
+        response_snippet = response.get("extracted_snippet") or {}
         record = {
             "id": key,
             "place_id": place_id,
             "rating": item.get("rating"),
-            "text": text.get("text", ""),
-            "original_text": original.get("text", ""),
-            "language": original.get("languageCode") or text.get("languageCode", ""),
-            "author": author.get("displayName", ""),
-            "author_uri": author.get("uri", ""),
-            "author_photo": author.get("photoUri", ""),
-            "publish_time": item.get("publishTime", ""),
-            "relative_time": item.get("relativePublishTimeDescription", ""),
-            "maps_uri": item.get("googleMapsUri", ""),
+            # "translated" mengikuti bahasa hl=id; "snippet" bisa campuran teks asli & terjemahan.
+            "text": snippet.get("translated") or item.get("snippet") or snippet.get("original") or "",
+            "original_text": snippet.get("original", ""),
+            "author": user.get("name", ""),
+            "author_uri": user.get("link", ""),
+            "author_photo": user.get("thumbnail", ""),
+            "publish_time": item.get("iso_date", ""),
+            "edited_time": item.get("iso_date_of_last_edit", ""),
+            "relative_time": item.get("date", ""),
+            "maps_uri": item.get("link", ""),
+            "response_text": response_snippet.get("original") or response.get("snippet") or "",
+            "response_time": response.get("iso_date", ""),
             "last_seen": now_iso,
         }
         if key in by_key:
@@ -123,19 +151,6 @@ def record_history(history, place_id, date, rating, count):
     else:
         points.append(point)
         points.sort(key=lambda p: p["date"])
-
-
-def rename_place(place_id, new_id, config, history, reviews):
-    """Google kadang mengganti place ID. Pindahkan semua data ke ID baru."""
-    for center in config["centers"]:
-        if center["place_id"] == place_id:
-            center["place_id"] = new_id
-    if place_id in history:
-        history.setdefault(new_id, [])
-        history[new_id] = sorted(history.pop(place_id) + history[new_id], key=lambda p: p["date"])
-    for review in reviews:
-        if review["place_id"] == place_id:
-            review["place_id"] = new_id
 
 
 def now_utc():
