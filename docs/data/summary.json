@@ -1,11 +1,11 @@
 {
-  "updated_at": "2026-10-13T23:40:23Z",
-  "date": "2026-10-14",
+  "updated_at": "2026-10-14T23:38:49Z",
+  "date": "2026-10-15",
   "centers": [
     {
       "rating": 4.9,
       "user_rating_count": 69,
-      "last_fetched": "2026-10-13T23:40:23Z",
+      "last_fetched": "2026-10-14T23:38:49Z",
       "error": null,
       "place_id": "ChIJQQN7TQHzaS4RLzQQ4w19Fvg",
       "name": "Sparks Swim - Kalimalang",
@@ -15,7 +15,7 @@
     {
       "rating": 4.7,
       "user_rating_count": 14,
-      "last_fetched": "2026-10-13T23:40:23Z",
+      "last_fetched": "2026-10-14T23:38:49Z",
       "error": null,
       "place_id": "ChIJlWCdgmXlaS4Rd22jM9sakjU",
       "name": "Sparks Swim - Pamulang",
@@ -25,7 +25,7 @@
     {
       "rating": 4.7,
       "user_rating_count": 52,
-      "last_fetched": "2026-10-13T23:40:23Z",
+      "last_fetched": "2026-10-14T23:38:49Z",
       "error": null,
       "place_id": "ChIJ4br5D0z_aS4RtgiitKkVQwk",
       "name": "Sparks Swim - Karawaci",
@@ -35,7 +35,7 @@
     {
       "rating": null,
       "user_rating_count": null,
-      "last_fetched": "2026-10-13T23:40:23Z",
+      "last_fetched": "2026-10-14T23:38:49Z",
       "error": null,
       "place_id": "ChIJodkZ3y_xaS4R8l_mHsQwP4s",
       "name": "Sparks Swim - Bintaro Utown",
@@ -45,7 +45,7 @@
     {
       "rating": 5,
       "user_rating_count": 5,
-      "last_fetched": "2026-10-13T23:40:23Z",
+      "last_fetched": "2026-10-14T23:38:49Z",
       "error": null,
       "place_id": "ChIJv5sOUIoDai4Rnt6pqqcJ4wY",
       "name": "Sparks Swim - Taman Palem",
@@ -55,7 +55,7 @@
     {
       "rating": 3,
       "user_rating_count": 1,
-      "last_fetched": "2026-10-13T23:40:23Z",
+      "last_fetched": "2026-10-14T23:38:49Z",
       "error": null,
       "place_id": "ChIJsyqvhgmLaS4RcIPPBVvkLYM",
       "name": "Sparks Swim - Harapan Indah",
