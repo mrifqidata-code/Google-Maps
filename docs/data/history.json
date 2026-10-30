@@ -84,6 +84,11 @@
       "date": "2026-10-29",
       "rating": 4.8,
       "count": 71
+    },
+    {
+      "date": "2026-10-30",
+      "rating": 4.8,
+      "count": 71
     }
   ],
   "ChIJlWCdgmXlaS4Rd22jM9sakjU": [
@@ -169,6 +174,11 @@
     },
     {
       "date": "2026-10-29",
+      "rating": 4.8,
+      "count": 16
+    },
+    {
+      "date": "2026-10-30",
       "rating": 4.8,
       "count": 16
     }
@@ -258,6 +268,11 @@
       "date": "2026-10-29",
       "rating": 4.7,
       "count": 54
+    },
+    {
+      "date": "2026-10-30",
+      "rating": 4.7,
+      "count": 54
     }
   ],
   "ChIJv5sOUIoDai4Rnt6pqqcJ4wY": [
@@ -343,6 +358,11 @@
     },
     {
       "date": "2026-10-29",
+      "rating": 5,
+      "count": 6
+    },
+    {
+      "date": "2026-10-30",
       "rating": 5,
       "count": 6
     }
@@ -432,6 +452,11 @@
       "date": "2026-10-29",
       "rating": 4.6,
       "count": 5
+    },
+    {
+      "date": "2026-10-30",
+      "rating": 4.6,
+      "count": 5
     }
   ],
   "ChIJodkZ3y_xaS4R8l_mHsQwP4s": [
@@ -452,6 +477,11 @@
     },
     {
       "date": "2026-10-29",
+      "rating": 5,
+      "count": 2
+    },
+    {
+      "date": "2026-10-30",
       "rating": 5,
       "count": 2
     }
