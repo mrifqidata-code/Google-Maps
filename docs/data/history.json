@@ -229,6 +229,11 @@
       "date": "2026-11-27",
       "rating": 4.8,
       "count": 85
+    },
+    {
+      "date": "2026-11-28",
+      "rating": 4.8,
+      "count": 85
     }
   ],
   "ChIJlWCdgmXlaS4Rd22jM9sakjU": [
@@ -461,6 +466,11 @@
       "date": "2026-11-27",
       "rating": 4.9,
       "count": 30
+    },
+    {
+      "date": "2026-11-28",
+      "rating": 4.9,
+      "count": 31
     }
   ],
   "ChIJ4br5D0z_aS4RtgiitKkVQwk": [
@@ -691,6 +701,11 @@
     },
     {
       "date": "2026-11-27",
+      "rating": 4.8,
+      "count": 64
+    },
+    {
+      "date": "2026-11-28",
       "rating": 4.8,
       "count": 64
     }
@@ -925,6 +940,11 @@
       "date": "2026-11-27",
       "rating": 5,
       "count": 16
+    },
+    {
+      "date": "2026-11-28",
+      "rating": 5,
+      "count": 16
     }
   ],
   "ChIJsyqvhgmLaS4RcIPPBVvkLYM": [
@@ -1157,6 +1177,11 @@
       "date": "2026-11-27",
       "rating": 4.9,
       "count": 25
+    },
+    {
+      "date": "2026-11-28",
+      "rating": 4.9,
+      "count": 25
     }
   ],
   "ChIJodkZ3y_xaS4R8l_mHsQwP4s": [
@@ -1324,6 +1349,11 @@
       "date": "2026-11-27",
       "rating": 4.8,
       "count": 16
+    },
+    {
+      "date": "2026-11-28",
+      "rating": 4.8,
+      "count": 17
     }
   ]
 }
